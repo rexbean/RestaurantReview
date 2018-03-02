@@ -11,8 +11,12 @@ import scrapy
 class ReviewspiderItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
+    index   = scrapy.Field()
+    name    = scrapy.Field()
+    rating  = scrapy.Field()
+    review  = scrapy.Field()
     pass
 
 class RestaurantItem(scrapy.Item):
-    title = scrapy.Field()
-    url = scrapy.Field()
+    name    = scrapy.Field()
+    url     = scrapy.Field()
