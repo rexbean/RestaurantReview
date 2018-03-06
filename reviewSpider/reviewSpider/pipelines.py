@@ -10,15 +10,10 @@ from util.util import Util
 class ReviewspiderPipeline(object):
     def process_item(self, item, spider):
         name = item['name']
-        if myGlobal.gName == '':
-            myGlobal.gName = name
-        if myGlobal.gName == name:
-            myGlobal.reviewList.append(dict(item))
-        elif myGlobal.gName != name:
-            Util.writeJson(myGlobal.gName)
-            myGlobal.reviewList[:] = []
-            myGlobal.gName = name
+        index = myGlobal.nameIndex[name]
+        myGlobal.reviewList[index].append(dict(item))
         return item
 
     def close_spider(self, spider):
-        Util.writeJson(myGlobal.gName)
+        for index, reviews in enumerate(myGlobal.reviewList):
+            Util.writeJson(index, reviews)

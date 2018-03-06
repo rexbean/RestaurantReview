@@ -12,13 +12,13 @@ class Util():
         return s
 
     @staticmethod
-    def writeJson(name):
+    def writeJson(name, reviewList):
         print(name)
-        path = './reviewSpider/data/'+name.encode('UTF8').replace(' ','').replace('\'','') + '.json'
+        path = './reviewSpider/data/' + str(name) + '.json'
         print(path)
         # Reading data back
         with open(path, 'wb') as f:
-            json.dump(myGlobal.reviewList,f)
+            json.dump(reviewList,f)
 
     @staticmethod
     def removeIllegal(s):

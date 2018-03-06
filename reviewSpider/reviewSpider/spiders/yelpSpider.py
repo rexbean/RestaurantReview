@@ -38,12 +38,17 @@ class YelpSpider(scrapy.Spider):
 
             if name is not None and url is not None:
                 name                = name.replace(u'\u2019',"'")
-                restaurant['name']  = name
                 url                 = 'https://www.yelp.com'+ url
-                restaurant['url']   = url
+
+
+                reviewList = []
+
+                myGlobal.nameIndex[name] = n - 1
+                myGlobal.reviewList.append(reviewList)
+
                 meta = {}
-                print(restaurant['name'])
-                print(restaurant['url'])
+                print(name)
+                print(url)
                 meta['name'] = name
                 meta['index'] = 0
                 print('=================='+name.encode("UTF8") + '========================')
@@ -51,38 +56,38 @@ class YelpSpider(scrapy.Spider):
                 yield scrapy.Request(url, meta = meta, callback=self.parseReview)
 
     def parseReview(self, response):
-        with open('./review-1.txt','a') as f:
-            nextUrl = response.xpath('//*[@rel="next"]/@href').extract_first()
-            title   = response.xpath('//title//text()').extract_first()
+        # with open('./review-1.txt','a') as f:
+        nextUrl = response.xpath('//*[@rel="next"]/@href').extract_first()
+        title   = response.xpath('//title//text()').extract_first()
 
-            name    = response.meta['name']
-            index   = response.meta['index']
+        name    = response.meta['name']
+        index   = response.meta['index']
 
-            # print('=================='+title.encode("UTF8") + '========================')
+        # print('=================='+title.encode("UTF8") + '========================')
 
-            jsonPath    = '//*[@type="application/ld+json"]'
-            jsonFile  = response.xpath(jsonPath+"//text()").extract_first()
+        jsonPath    = '//*[@type="application/ld+json"]'
+        jsonFile  = response.xpath(jsonPath+"//text()").extract_first()
 
-            reviewJson = json.loads(jsonFile)
+        reviewJson = json.loads(jsonFile)
 
-            for r in reviewJson['review']:
-                reviewItem = ReviewspiderItem()
+        for r in reviewJson['review']:
+            reviewItem = ReviewspiderItem()
 
-                rating = r['reviewRating']['ratingValue']
-                review = r['description']
-                review = review.replace(u'\u2019',"'")
-                reviewItem['name']      = name
-                reviewItem['index']     = index
-                reviewItem['rating']    = rating
-                reviewItem['review']    = review
+            rating = r['reviewRating']['ratingValue']
+            review = r['description']
+            review = review.replace(u'\u2019',"'")
+            reviewItem['name']      = name
+            reviewItem['index']     = index
+            reviewItem['rating']    = rating
+            reviewItem['review']    = review
 
-                index += 1
-            if nextUrl is None:
-                f.write('================'+name.encode('UTF8')+'================\n')
-            else:
-                f.write(name.encode('UTF8')+'\t'+ str(index) + '\t' + nextUrl.encode('UTF8')+'\n')
-                # yield reviewItem
+            index += 1
+        # if nextUrl is None:
+        #     f.write('================'+name.encode('UTF8')+'================\n')
+        # else:
+        #     f.write(name.encode('UTF8')+'\t'+ str(index) + '\t' + nextUrl.encode('UTF8')+'\n')
+            yield reviewItem
 
-            if nextUrl is not None:
-                response.meta['index']   = index
-                yield scrapy.Request(nextUrl,meta = response.meta, callback=self.parseReview)
+        if nextUrl is not None:
+            response.meta['index']   = index
+            yield scrapy.Request(nextUrl,meta = response.meta, callback=self.parseReview)
