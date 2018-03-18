@@ -82,7 +82,8 @@ class Extractor:
                     summary[lemma][0].append(option[1])
                 if sentiment < 0:
                     summary[lemma][1].append(option[1])
-        return summary
+        return [(lemma, summary[lemma][0], summary[lemma][1]) for lemma in
+                sorted(summary, key=lambda k: len(summary[k][0]) + len(summary[k][1]), reverse=True)]
 
 
 if __name__ == "__main__":
@@ -111,18 +112,18 @@ if __name__ == "__main__":
     #     print(a, _fe.sentiment(_fe.nlp(a)))
 
     _summary = _fe.summary()
-    for i, n in enumerate(sorted(_summary, key=lambda k: len(_summary[k][0]) + len(_summary[k][1]), reverse=True)):
-        print(str(i + 1) + '.', '[' + n + ']', str(len(_summary[n][0])) + '/' + str(len(_summary[n][1])))
+    for i, n in enumerate(_summary):
+        print(str(i + 1) + '.', '[' + n[0] + ']', str(len(n[1])) + '/' + str(len(n[2])))
 
         print('\tpositive:')
-        positive = _summary[n][0]
+        positive = n[1]
         if len(positive) > 3:
             positive = random.sample(positive, 3)
         for noun in positive:
             print('\t', norm(noun.sent))
 
         print('\tnegative:')
-        negative = _summary[n][1]
+        negative = n[2]
         if len(negative) > 3:
             negative = random.sample(negative, 3)
         for noun in negative:
