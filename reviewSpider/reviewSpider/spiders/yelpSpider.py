@@ -19,15 +19,16 @@ class YelpSpider(scrapy.Spider):
 
     start_urls = [
         # search the account with keyword
-        "https://www.yelp.com/search?find_desc=&find_near=santa-clara-university-santa-clara&ns=1"
-
+        # "https://www.yelp.com/search?find_desc=&find_near=santa-clara-university-santa-clara&ns=1"
+        "https://www.yelp.com/search?find_desc=Restaurants&start=560&sortby=rating&find_near=santa-clara-university-santa-clara"
     ]
 
     def parse(self, response):
-        for n in range(1,11):
+        for n in range(2,12):
             restaurant  = RestaurantItem()
 
-            rootPath    = '//*[@id="super-container"]/div/div[2]/div[1]/div/div[4]/ul[2]'
+            #rootPath    = '//*[@id="super-container"]/div/div[2]/div[1]/div/div[4]/ul[2]'
+            rootPath    = '//*[@id="super-container"]/div/div[2]/div[1]/div/div[5]/ul[2]'
 
             namePath    = './li['+ str(n) + ']/div/div[1]/div[1]/div/div[2]/h3/span/a/span//text()'
             urlPath     = './li['+ str(n) + ']/div/div[1]/div[1]/div/div[2]/h3/span/a/@href'
@@ -36,6 +37,7 @@ class YelpSpider(scrapy.Spider):
             name        = rootPath.xpath(namePath).extract_first()
             url         = rootPath.xpath(urlPath).extract_first()
 
+            # print(str(n),name,url)
             if name is not None and url is not None:
                 name                = name.replace(u'\u2019',"'")
                 url                 = 'https://www.yelp.com'+ url
@@ -43,7 +45,7 @@ class YelpSpider(scrapy.Spider):
 
                 reviewList = []
 
-                myGlobal.nameIndex[name] = n - 1
+                myGlobal.nameIndex[name] = n - 2
                 myGlobal.reviewList.append(reviewList)
 
                 meta = {}
@@ -51,8 +53,9 @@ class YelpSpider(scrapy.Spider):
                 print(url)
                 meta['name'] = name
                 meta['index'] = 0
-                print('=================='+name.encode("UTF8") + '========================')
 
+                print('=================='+name.encode('UTF8') + '========================')
+                #
                 yield scrapy.Request(url, meta = meta, callback=self.parseReview)
 
     def parseReview(self, response):
