@@ -1,4 +1,4 @@
 /.idea/
-/.pyc/
 /summary.html
 *.pyc
+__pycache__/
