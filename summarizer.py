@@ -25,7 +25,8 @@ class Summarizer:
             lemma = [token.lemma_ for token in chunk
                      # CD=cardinal number, DT=determiner, WP=wh-pronoun(personal)
                      # PRP=pronoun(personal), PRP$=pronoun(possessive)
-                     if token.tag_ not in ('CD', 'DT', 'WP', 'PRP', 'PRP$')
+                     # JJ=adjective, JJR=adjective(comparative), JJS=adjective(superlative)
+                     if token.tag_ not in ('CD', 'DT', 'WP', 'PRP', 'PRP$', 'JJ', 'JJR', 'JJS')
                      # NN=noun(singular or mass), NNS=noun(plural)
                      and (not token.is_stop or token.tag_ in ('NN', 'NNS'))
                      and not token.is_punct and not token.is_space]
@@ -52,11 +53,13 @@ class Summarizer:
                 if subjs:
                     options[lemma].append(Option(subjs, chunk,
                                                  any([token.dep_ == 'neg' for token in chunk.root.subtree])))
-                elif len(list(chunk.root.head.subtree)) < 8:
-                    subjs = [word for word in chunk.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
-                    if subjs:
-                        options[lemma].append(Option(subjs, chunk,
-                                                     any([token.dep_ == 'neg' for token in chunk.root.head.subtree])))
+                    continue
+                subjs = [word for word in chunk.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
+                if subjs:
+                    options[lemma].append(Option(subjs, chunk,
+                                                 len(list(chunk.root.head.subtree)) < 12 and
+                                                 any([token.dep_ == 'neg' for token in chunk.root.head.subtree])))
+                    continue
         return options
 
     @classmethod
@@ -118,16 +121,32 @@ def norm(raw):
 if __name__ == "__main__":
     print('parsing text ...')
     with open('review_data/3.json') as file:
-        _s = Summarizer('\n\n'.join(item['review'] for item in json.load(file)))
+        _s = Summarizer('\n\n'.join(item['review'] for item in json.load(file)[:10]))
 
-    _summary = _s.summary()
-    for i, f in enumerate(_summary):
-        print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))
-
-        print('\tpositive:')
-        for n in f.positive[:3]:
-            print('\t', norm(n.sent))
-
-        print('\tnegative:')
-        for n in f.negative[:3]:
-            print('\t', norm(n.sent))
+    for l, c in _s.nouns():
+        subjs = [word for word in c.root.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
+        if subjs:
+            negated = any([token.dep_ == 'neg' for token in c.root.subtree])
+            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+            input('press')
+            continue
+        subjs = [word for word in c.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
+        if subjs:
+            negated = len(list(c.root.head.subtree)) < 12 and \
+                      any([token.dep_ == 'neg' for token in c.root.head.subtree])
+            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+            input('press')
+            continue
+        print(l, ' - ', 'not detected', ' - ', norm(c.sent))
+        input('press')
+# _summary = _s.summary()
+# for i, f in enumerate(_summary):
+#     print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))
+#
+#     print('\tpositive:')
+#     for n in f.positive[:3]:
+#         print('\t', norm(n.sent))
+#
+#     print('\tnegative:')
+#     for n in f.negative[:3]:
+#         print('\t', norm(n.sent))
