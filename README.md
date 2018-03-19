@@ -1,5 +1,6 @@
 ## Environment Install
 
+```
 pip3 install spacy
 pip3 install yattag
 
@@ -8,7 +9,7 @@ export LANG=en_US.UTF-8
 python3 -m spacy download en_core_web_lg
 
 python install nltk, twpython
-
+```
 
 ## Note
 
