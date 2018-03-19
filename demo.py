@@ -1,4 +1,5 @@
 import json
+import os
 import summarizer
 from yattag import Doc, indent
 
@@ -94,4 +95,4 @@ while True:
     s = summarizer.Summarizer(reviews).summary()
     with open('summary.html', 'w') as file:
         file.write(html(s))
-    print('please access http://localhost/')
+    print('please access file://' + os.path.abspath('summary.html'))
