@@ -116,6 +116,7 @@ def norm(raw):
 
 
 if __name__ == "__main__":
+    print('parsing text ...')
     with open('review_data/3.json') as file:
         _s = Summarizer('\n\n'.join(item['review'] for item in json.load(file)))
 

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="http://cdn.90so.net/layui/2.2.5/css/layui.css">
+</head>
+<body>
+
+<div class="layui-container">
+    <div class="layui-row" style="margin-top: 40px">
+        <div class="layui-col-md10 layui-col-md-offset1">
+            <div class="layui-card">
+                <div class="layui-card-header layui-bg-green">Reviews Summary</div>
+                <div class="layui-card-body">
+                    <div class="layui-row">
+                        <div class="layui-col-md6">
+                            <div class="layui-collapse" lay-accordion>
+                                <div class="layui-colla-item">
+                                    <h2 class="layui-colla-title">
+                                        &nbsp;&nbsp; <strong style="color: #01AAED; font-size: 24px;">service</strong> &nbsp;&nbsp;
+                                        <span style="color: #FF5722; font-size: 12px;"><i class="layui-icon">&#xe6c6;</i>26</span> /
+                                        <span style="color: #2F4056; font-size: 12px;"><i class="layui-icon">&#xe6c5;</i>1</span>
+                                    </h2>
+                                    <div class="layui-colla-content layui-show">
+                                        <div class="layui-progress" lay-showPercent="true" style="margin-top: 10px">
+                                            <div class="layui-progress-bar layui-bg-red" lay-percent="96%"></div>
+                                        </div>
+                                        <hr/>
+                                        <div>positive:</div>
+                                        <ul>
+                                            <li><span class="layui-badge-dot"></span>
+                                                Service was excellent.</li>
+                                            <li><span class="layui-badge-dot"></span>
+                                                Service is excellent here!</li>
+                                            <li><span class="layui-badge-dot"></span>
+                                                The service here was superb!</li>
+                                        </ul>
+                                        <hr/>
+                                        <div>negative:</div>
+                                        <ul>
+                                            <li><span class="layui-badge-dot layui-bg-cyan"></span>
+                                                Service is average not very fast</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="layui-colla-item">
+                                    <h2 class="layui-colla-title">
+                                        &nbsp;&nbsp; <strong style="color: #01AAED; font-size: 24px;">ramen</strong> &nbsp;&nbsp;
+                                        <span style="color: #FF5722; font-size: 12px;"><i class="layui-icon">&#xe6c6;</i>19</span> /
+                                        <span style="color: #2F4056; font-size: 12px;"><i class="layui-icon">&#xe6c5;</i>1</span>
+                                    </h2>
+                                    <div class="layui-colla-content">
+                                        <div class="layui-progress" lay-showPercent="true" style="margin-top: 10px">
+                                            <div class="layui-progress-bar layui-bg-red" lay-percent="95%"></div>
+                                        </div>
+                                        <hr/>
+                                        <div>positive:</div>
+                                        <ul>
+                                            <li><span class="layui-badge-dot"></span>
+                                                You can make your ramen spicy or very spicy by paying an additional fee to make it so.</li>
+                                            <li><span class="layui-badge-dot"></span>
+                                                The ramen and karage are excellent.</li>
+                                            <li><span class="layui-badge-dot"></span>
+                                                The ramen is really tasty.</li>
+                                        </ul>
+                                        <hr/>
+                                        <div>negative:</div>
+                                        <ul>
+                                            <li><span class="layui-badge-dot layui-bg-cyan"></span>
+                                                The ramen itself is subpar.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="layui-colla-item">
+                                    <h2 class="layui-colla-title">
+                                        &nbsp;&nbsp; <strong style="color: #01AAED; font-size: 24px;">broth</strong> &nbsp;&nbsp;
+                                        <span style="color: #FF5722; font-size: 12px;"><i class="layui-icon">&#xe6c6;</i>15</span> /
+                                        <span style="color: #2F4056; font-size: 12px;"><i class="layui-icon">&#xe6c5;</i>2</span>
+                                    </h2>
+                                    <div class="layui-colla-content">
+                                        <div class="layui-progress" lay-showPercent="true" style="margin-top: 10px">
+                                            <div class="layui-progress-bar layui-bg-red" lay-percent="88%"></div>
+                                        </div>
+                                        <hr/>
+                                        <div>positive:</div>
+                                        <ul>
+                                            <li><span class="layui-badge-dot"></span>
+                                                The noodles were nice and chewy, and the broth thick and tasty.</li>
+                                            <li><span class="layui-badge-dot"></span>
+                                                Broth taste pretty tasty - it wasn't bland or salty, good amount of spiciness, noodles are al dente and the chasu pork slices were not too thin.</li>
+                                            <li><span class="layui-badge-dot"></span>
+                                                I ordered the Tonkotsu Shoyu Ramen and it was pretty good, the noodles were perfect (not too thin) and the broth was tasty.</li>
+                                        </ul>
+                                        <hr/>
+                                        <div>negative:</div>
+                                        <ul>
+                                            <li><span class="layui-badge-dot layui-bg-cyan"></span>
+                                                The broth wasn't that flavorful.</li>
+                                            <li><span class="layui-badge-dot layui-bg-cyan"></span>
+                                                Broth: Not greasy and very flavorful.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-col-md6">
+                            <div id="chart" style="width: 400px; height: 400px; margin: 20px auto;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="http://cdn.90so.net/layui/2.2.5/layui.all.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.0.4/echarts-en.simple.min.js"></script>
+<script>
+    var chart = echarts.init(document.getElementById('chart'));
+    data = [
+        {value: 27, name: 'service'},
+        {value: 20, name: 'ramen'},
+        {value: 17, name: 'broth'},
+        {value: 12, name: 'miso ramen'},
+        {value: 11, name: 'noodle'},
+        {value: 11, name: 'place'},
+        {value: 10, name: 'food'},
+        {value: 9, name: 'staff'},
+        {value: 8, name: 'gyoza'},
+        {value: 7, name: 'taka ramen'},
+        {value: 7, name: 'egg'}
+    ];
+    option = {
+        series: [
+            {
+                type: 'pie',
+                radius: '55%',
+                center: ['50%', '50%'],
+                data: data,
+                roseType: 'radius',
+                animationType: 'scale',
+                animationEasing: 'elasticOut'
+            }
+        ]
+    };
+    chart.setOption(option);
+</script>
+</body>
+</html>
