@@ -6,13 +6,47 @@ from collections import namedtuple, defaultdict
 import spacy
 
 Noun = namedtuple('Noun', ['lemma', 'chunk'])
-Option = namedtuple('Option', ['subjs', 'chunk', 'negation'])
+Opinion = namedtuple('Opinion', ['subjs', 'chunk', 'negation'])
 Summary = namedtuple('Summary', ['lemma', 'positive', 'negative'])
 
 
 class Summarizer:
     nlp = spacy.load('en_core_web_lg')
     excellent, poor = nlp('excellent poor')
+    # from vader --start
+    B_INCR = 0.293
+    B_DECR = -0.293
+    N_SCALAR = -0.74
+    PUNC_LIST = [".", "!", "?", ",", ";", ":", "-", "'", "\"",
+                 "!!", "!!!", "??", "???", "?!?", "!?!", "?!?!", "!?!?"]
+    NEGATE = {"aint", "arent", "cannot", "cant", "couldnt", "darent", "didnt", "doesnt",
+              "ain't", "aren't", "can't", "couldn't", "daren't", "didn't", "doesn't",
+              "dont", "hadnt", "hasnt", "havent", "isnt", "mightnt", "mustnt", "neither",
+              "don't", "hadn't", "hasn't", "haven't", "isn't", "mightn't", "mustn't",
+              "neednt", "needn't", "never", "none", "nope", "nor", "not", "nothing", "nowhere",
+              "oughtnt", "shant", "shouldnt", "uhuh", "wasnt", "werent",
+              "oughtn't", "shan't", "shouldn't", "uh-uh", "wasn't", "weren't",
+              "without", "wont", "wouldnt", "won't", "wouldn't", "rarely", "seldom", "despite"}
+    BOOSTER_DICT = \
+        {"absolutely": B_INCR, "amazingly": B_INCR, "awfully": B_INCR, "completely": B_INCR, "considerably": B_INCR,
+         "decidedly": B_INCR, "deeply": B_INCR, "effing": B_INCR, "enormously": B_INCR,
+         "entirely": B_INCR, "especially": B_INCR, "exceptionally": B_INCR, "extremely": B_INCR,
+         "fabulously": B_INCR, "flipping": B_INCR, "flippin": B_INCR,
+         "fricking": B_INCR, "frickin": B_INCR, "frigging": B_INCR, "friggin": B_INCR, "fully": B_INCR,
+         "fucking": B_INCR,
+         "greatly": B_INCR, "hella": B_INCR, "highly": B_INCR, "hugely": B_INCR, "incredibly": B_INCR,
+         "intensely": B_INCR, "majorly": B_INCR, "more": B_INCR, "most": B_INCR, "particularly": B_INCR,
+         "purely": B_INCR, "quite": B_INCR, "really": B_INCR, "remarkably": B_INCR,
+         "so": B_INCR, "substantially": B_INCR,
+         "thoroughly": B_INCR, "totally": B_INCR, "tremendously": B_INCR,
+         "uber": B_INCR, "unbelievably": B_INCR, "unusually": B_INCR, "utterly": B_INCR,
+         "very": B_INCR,
+         "almost": B_DECR, "barely": B_DECR, "hardly": B_DECR, "just enough": B_DECR,
+         "kind of": B_DECR, "kinda": B_DECR, "kindof": B_DECR, "kind-of": B_DECR,
+         "less": B_DECR, "little": B_DECR, "marginally": B_DECR, "occasionally": B_DECR, "partly": B_DECR,
+         "scarcely": B_DECR, "slightly": B_DECR, "somewhat": B_DECR,
+         "sort of": B_DECR, "sorta": B_DECR, "sortof": B_DECR, "sort-of": B_DECR}
+    # from vader --end
     print('model loaded.')
 
     def __init__(self, reviews):
@@ -43,27 +77,27 @@ class Summarizer:
         return {lemma: freqs[lemma] for lemma in freqs if len(freqs[lemma]) >= threshold}
 
     @staticmethod
-    def options(freqs):
-        """ return {lemma:[Option]} """
-        options = defaultdict(list)
+    def opinions(freqs):
+        """ return {lemma:[Opinion]} """
+        opinions = defaultdict(list)
         for lemma, chunks in freqs.items():
             for chunk in chunks:
                 # JJ=adjective, JJR=adjective(comparative), JJS=adjective(superlative)
                 subjs = [word for word in chunk.root.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
                 if subjs:
-                    options[lemma].append(Option(subjs, chunk,
-                                                 any([token.dep_ == 'neg' for token in chunk.root.subtree])))
+                    opinions[lemma].append(Opinion(subjs, chunk,
+                                                   any([token.dep_ == 'neg' for token in chunk.root.subtree])))
                     continue
                 subjs = [word for word in chunk.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
                 if subjs:
-                    options[lemma].append(Option(subjs, chunk,
-                                                 len(list(chunk.root.head.subtree)) < 12 and
-                                                 any([token.dep_ == 'neg' for token in chunk.root.head.subtree])))
+                    opinions[lemma].append(Opinion(subjs, chunk,
+                                                   len(list(chunk.root.head.subtree)) < 12 and
+                                                   any([token.dep_ == 'neg' for token in chunk.root.head.subtree])))
                     continue
-        return options
+        return opinions
 
     @classmethod
-    def sentiments(cls, words):
+    def word_sentiments(cls, words):
         """ return {lemma:float} """
         sentiments = {}
         pos_words, neg_words = [cls.excellent], [cls.poor]
@@ -91,22 +125,59 @@ class Summarizer:
         # print(len(words), '-', words)
         return sentiments
 
+    @classmethod
+    def _never_check(cls, sentence, start_i, i):
+        if start_i == 0:
+            if cls._negated(str(sentence[i - 1])):
+                return cls.N_SCALAR
+        if start_i == 1:
+            if str(sentence[i - 2]) == "never" and (str(sentence[i - 1]) == "so" or str(sentence[i - 1]) == "this"):
+                return 1.5
+            elif cls._negated(str(sentence[i - 2])):
+                return cls.N_SCALAR
+        if start_i == 2:
+            if str(sentence[i - 3]) == "never" and \
+                    (str(sentence[i - 2]) == "so" or str(sentence[i - 2]) == "this") or \
+                    (str(sentence[i - 1]) == "so" or str(sentence[i - 1]) == "this"):
+                return 1.25
+            elif cls._negated(str(sentence[i - 3])):
+                return cls.N_SCALAR
+        return 1.0
+
+    @classmethod
+    def _negated(cls, word):
+        if word.lower() in cls.NEGATE or "n't" in word.lower():
+            return True
+        return False
+
+    @classmethod
+    def sent_sentiments(cls, opinion, sentiments):
+        # sentiment = sum([sentiments.get(subj.lemma_, 0) for subj in opinion.subjs])
+        # if opinion.negation:
+        #     sentiment = -0.8 * sentiment
+        sents = []
+        for subj in opinion.subjs:
+            sentiment = sentiments.get(subj.lemma_, 0)
+            for start_i in range(0, 3):
+                if subj.i - opinion.chunk.sent.start > start_i:
+                    sentiment *= cls._never_check(opinion.chunk.sent, start_i, subj.i - opinion.chunk.sent.start)
+            sents.append(sentiment)
+        return sum(sents)
+
     def summary(self):
         """ return sorted [Summary] """
-        options = self.options(self.freqs(self.nouns()))
-        sentiments = self.sentiments({subj.lemma_: subj for options_ in options.values()
-                                      for option in options_ for subj in option.subjs}.values())
+        opinions = self.opinions(self.freqs(self.nouns()))
+        sentiments = self.word_sentiments({subj.lemma_: subj for opinions_ in opinions.values()
+                                           for opinion in opinions_ for subj in opinion.subjs}.values())
         summary = defaultdict(lambda: [[], [], 0])
-        for lemma, options in options.items():
-            for option in options:
-                sentiment = sum([sentiments.get(subj.lemma_, 0) for subj in option.subjs])
-                if option.negation:
-                    sentiment = -0.8 * sentiment
+        for lemma, opis in opinions.items():
+            for opi in opis:
+                sentiment = self.sent_sentiments(opi, sentiments)
                 if sentiment > 0:
-                    summary[lemma][0].append((option.chunk, sentiment))
+                    summary[lemma][0].append((opi.chunk, sentiment))
                     summary[lemma][2] += 1
                 elif sentiment < 0:
-                    summary[lemma][1].append((option.chunk, sentiment))
+                    summary[lemma][1].append((opi.chunk, sentiment))
                     summary[lemma][2] += 1
         return [Summary(lemma,
                         [chunk[0] for chunk in sorted(summary[lemma][0], key=operator.itemgetter(1), reverse=True)],
@@ -123,30 +194,30 @@ if __name__ == "__main__":
     with open('review_data/3.json') as file:
         _s = Summarizer('\n\n'.join(item['review'] for item in json.load(file)[:10]))
 
-    for l, c in _s.nouns():
-        subjs = [word for word in c.root.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
-        if subjs:
-            negated = any([token.dep_ == 'neg' for token in c.root.subtree])
-            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
-            input('press')
-            continue
-        subjs = [word for word in c.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
-        if subjs:
-            negated = len(list(c.root.head.subtree)) < 12 and \
-                      any([token.dep_ == 'neg' for token in c.root.head.subtree])
-            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
-            input('press')
-            continue
-        print(l, ' - ', 'not detected', ' - ', norm(c.sent))
-        input('press')
-# _summary = _s.summary()
-# for i, f in enumerate(_summary):
-#     print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))
-#
-#     print('\tpositive:')
-#     for n in f.positive[:3]:
-#         print('\t', norm(n.sent))
-#
-#     print('\tnegative:')
-#     for n in f.negative[:3]:
-#         print('\t', norm(n.sent))
+    # for l, c in _s.nouns():
+    #     subjs = [word for word in c.root.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
+    #     if subjs:
+    #         negated = any([token.dep_ == 'neg' for token in c.root.subtree])
+    #         print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+    #         input('press')
+    #         continue
+    #     subjs = [word for word in c.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
+    #     if subjs:
+    #         negated = len(list(c.root.head.subtree)) < 12 and \
+    #                   any([token.dep_ == 'neg' for token in c.root.head.subtree])
+    #         print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+    #         input('press')
+    #         continue
+    #     print(l, ' - ', 'not detected', ' - ', norm(c.sent))
+    #     input('press')
+    _summary = _s.summary()
+    for i, f in enumerate(_summary):
+        print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))
+
+        print('\tpositive:')
+        for n in f.positive[:3]:
+            print('\t', norm(n.sent))
+
+        print('\tnegative:')
+        for n in f.negative[:3]:
+            print('\t', norm(n.sent))
