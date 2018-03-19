@@ -8,7 +8,7 @@ export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 python3 -m spacy download en_core_web_lg
 
-python install nltk, twpython
+#python install nltk, twpython
 ```
 
 ## Note
