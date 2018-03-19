@@ -1,10 +1,39 @@
-    # for item all in upper case
+# for item all in upper case
 
     if item.isupper():
         if sentiment > 0:
             sentiment += C_INCR
         else:
             sentiment -= C_INCR
+
+# for preceding words ep: adverbs
+    def scalar_booster(word, sentiment):
+        """
+        Check if the preceding words increase, decrease, or negate/nullify the
+        sentiment
+        """
+        scalar = 0.0
+        word_lower = word.lower()
+        if word_lower in BOOSTER_DICT:
+            scalar = BOOSTER_DICT[word_lower]
+            if sentiment < 0:
+                scalar *= -1
+            #check if booster/dampener word is in ALLCAPS (while others aren't)
+            if word.isupper():
+                if sentiment > 0:
+                    scalar += C_INCR
+                else: scalar -= C_INCR
+        return scalar
+    
+## add in for-loop
+
+        s = scalar_booster(words_and_emoticons[i-(start_i+1)], sentiment)
+        if start_i == 1 and s != 0:
+            s = s*0.95
+        if start_i == 2 and s != 0:
+            s = s*0.9
+        sentiment = sentiment+s
+
 
 @classmethod
 class PunctEmph(object):
