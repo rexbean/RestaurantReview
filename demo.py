@@ -95,6 +95,18 @@ while True:
         reviews = '\n\n'.join(item['review'] for item in json.load(file))
     print('parsing text ...')
     s = summarizer.Summarizer(reviews).summary()
+
+    for i, f in enumerate(s):
+        print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))
+
+        print('\tpositive:')
+        for n in f.positive[:3]:
+            print('\t', n.sent)
+
+        print('\tnegative:')
+        for n in f.negative[:3]:
+            print('\t', n.sent)
+
     with open('summary.html', 'w') as file:
         file.write(html(s))
     print('please access file://' + os.path.abspath('summary.html'))
