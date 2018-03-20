@@ -17,6 +17,8 @@ class Summarizer:
     B_INCR = 0.293
     B_DECR = -0.293
     N_SCALAR = -0.74
+    C_INCR = 0.733
+
     PUNC_LIST = [".", "!", "?", ",", ";", ":", "-", "'", "\"",
                  "!!", "!!!", "??", "???", "?!?", "!?!", "?!?!", "!?!?"]
     NEGATE = {"aint", "arent", "cannot", "cant", "couldnt", "darent", "didnt", "doesnt",
@@ -143,6 +145,25 @@ class Summarizer:
             elif cls._negated(str(sentence[i - 3])):
                 return cls.N_SCALAR
         return 1.0
+    
+    @classmethod
+    def _scalar_booster(cls, word, sentiment):
+        """
+        Check if the preceding words increase, decrease, or negate/nullify the
+        sentiment
+        """
+        scalar = 0.0
+        word_lower = word.lower()
+        if word_lower in BOOSTER_DICT:
+            scalar = BOOSTER_DICT[word_lower]
+            if sentiment < 0:
+                scalar *= -1
+            #check if booster/dampener word is in ALLCAPS (while others aren't)
+            if word.isupper():
+                if sentiment > 0:
+                    scalar += C_INCR
+                else: scalar -= C_INCR
+        return scalar
 
     @classmethod
     def _negated(cls, word):
@@ -158,11 +179,58 @@ class Summarizer:
         sents = []
         for subj in opinion.subjs:
             sentiment = sentiments.get(subj.lemma_, 0)
+            # check if the subject word is in ALLCAPS
+            if subj.isupper():
+                if sentiment > 0:
+                    sentiment += C_INCR
+                else: sentiment -= C_INCR
+            
             for start_i in range(0, 3):
-                if subj.i - opinion.chunk.sent.start > start_i:
-                    sentiment *= cls._never_check(opinion.chunk.sent, start_i, subj.i - opinion.chunk.sent.start)
+                if i > start_i:
+                    i = subj.i - opinion.chunk.sent.start
+                    # Check if the preceding words increase, decrease, or negate/nullify the sentiment
+                    s = cls._scalar_booster(opinion.chunk.sent[i-(start_i+1)], sentiment)
+                    if start_i == 1 and s != 0:
+                        s = s*0.95
+                    if start_i == 2 and s != 0:
+                        s = s*0.9
+                    sentiment = sentiment+s
+
+                    sentiment *= cls._never_check(opinion.chunk.sent, start_i, i)
             sents.append(sentiment)
         return sum(sents)
+
+    #Evaluate the punctuation emphasis to sentences.
+
+    def punctuation_emphasis(self, opinion):
+        # add emphasis from exclamation points and question marks
+        ep_amplifier = self._amplify_ep(opinion.chunk.sent)
+        qm_amplifier = self._amplify_qm(opinion.chunk.sent)
+        punct_amplifier = ep_amplifier+qm_amplifier
+        return punct_amplifier
+
+    def _amplify_ep(self, text):
+        # check for added emphasis resulting from exclamation points (up to 4 of them)
+        ep_count = text.count("!")
+        if ep_count > 4:
+            ep_count = 4
+        # (empirically derived mean sentiment intensity rating increase for
+        # exclamation points)
+        ep_amplifier = ep_count*0.292
+        return ep_amplifier
+
+    def _amplify_qm(self, text):
+        # check for added emphasis resulting from question marks (2 or 3+)
+        qm_count = text.count("?")
+        qm_amplifier = 0
+        if qm_count > 1:
+            if qm_count <= 3:
+                # (empirically derived mean sentiment intensity rating increase for
+                # question marks)
+                qm_amplifier = qm_count*0.18
+            else:
+                qm_amplifier = 0.96
+        return qm_amplifier
 
     def summary(self):
         """ return sorted [Summary] """
@@ -173,6 +241,14 @@ class Summarizer:
         for lemma, opis in opinions.items():
             for opi in opis:
                 sentiment = self.sent_sentiments(opi, sentiments)
+                
+                # Implement punctuation emphasis in summarization
+                punct_emph = self.punctuation_emphasis(opi)
+                if sentiment > 0:
+                    sentiment += punct_emph
+                elif  sentiment < 0:
+                    sentiment -= punct_emph
+
                 if sentiment > 0:
                     summary[lemma][0].append((opi.chunk, sentiment))
                     summary[lemma][2] += 1

@@ -36,15 +36,15 @@
 
 
 @classmethod
-class PunctEmph(object):
     """
     Evaluate the punctuation emphasis to sentences.
     """
-    def __init__(self, text):
+    def punctuation_emphasis(self, text):
         # add emphasis from exclamation points and question marks
         ep_amplifier = self._amplify_ep(text)
         qm_amplifier = self._amplify_qm(text)
-        self.punct_amplifier = ep_amplifier+qm_amplifier
+        punct_amplifier = ep_amplifier+qm_amplifier
+        return punct_amplifier
 
     def _amplify_ep(self, text):
         # check for added emphasis resulting from exclamation points (up to 4 of them)
@@ -71,7 +71,7 @@ class PunctEmph(object):
 
 
 # Implementation in the sentiment summarization method
-    punct_emph = PunctEmph(text)
+    punct_emph = self.punctuation_emphasis(text)
     if sum_s > 0:
         sum_s += punct_emph.punct_amplifier
     elif  sum_s < 0:
