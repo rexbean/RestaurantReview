@@ -1,4 +1,4 @@
 /.idea/
 /summary.html
 *.pyc
-__pycache__/
+.DS_Store
