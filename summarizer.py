@@ -13,6 +13,7 @@ Summary = namedtuple('Summary', ['lemma', 'positive', 'negative'])
 class Summarizer:
     nlp = spacy.load('en_core_web_lg')
     excellent, poor = nlp('excellent poor')
+    BAN_WORDS = ['lot', 'something', 'anything', 'everything', 'time']
     # from vader --start
     B_INCR = 0.293
     B_DECR = -0.293
@@ -53,7 +54,7 @@ class Summarizer:
 
     def __init__(self, reviews):
         self.raw = reviews
-        self.doc = self.nlp(reviews)
+        self.doc = self.nlp(re.sub('(?<![.])\n+', '.\n', reviews))
 
     def nouns(self):
         """ return [Noun] """
@@ -62,9 +63,11 @@ class Summarizer:
                      # CD=cardinal number, DT=determiner, WP=wh-pronoun(personal)
                      # PRP=pronoun(personal), PRP$=pronoun(possessive)
                      # JJ=adjective, JJR=adjective(comparative), JJS=adjective(superlative)
-                     if token.tag_ not in ('CD', 'DT', 'WP', 'PRP', 'PRP$', 'JJ', 'JJR', 'JJS')
+                     # RB=adverb, RBR=adverb(comparative), RBS=adverb(superlative)
+                     if token.tag_ not in ('CD', 'DT', 'WP', 'PRP', 'PRP$', 'JJ', 'JJR', 'JJS', 'RB', 'RBR', 'RBS')
                      # NN=noun(singular or mass), NNS=noun(plural)
                      and (not token.is_stop or token.tag_ in ('NN', 'NNS'))
+                     and token.lemma_ not in self.BAN_WORDS
                      and not token.is_punct and not token.is_space]
             if lemma:
                 yield Noun(' '.join(lemma), chunk)
@@ -145,7 +148,7 @@ class Summarizer:
             elif cls._negated(str(sentence[i - 3])):
                 return cls.N_SCALAR
         return 1.0
-    
+
     @classmethod
     def _scalar_booster(cls, word, sentiment):
         """
@@ -153,16 +156,17 @@ class Summarizer:
         sentiment
         """
         scalar = 0.0
-        word_lower = word.lower()
-        if word_lower in BOOSTER_DICT:
-            scalar = BOOSTER_DICT[word_lower]
+        word_lower = word.lower_
+        if word_lower in cls.BOOSTER_DICT:
+            scalar = cls.BOOSTER_DICT[word_lower]
             if sentiment < 0:
                 scalar *= -1
-            #check if booster/dampener word is in ALLCAPS (while others aren't)
-            if word.isupper():
+            # check if booster/dampener word is in ALLCAPS (while others aren't)
+            if word.is_upper:
                 if sentiment > 0:
-                    scalar += C_INCR
-                else: scalar -= C_INCR
+                    scalar += cls.C_INCR
+                else:
+                    scalar -= cls.C_INCR
         return scalar
 
     @classmethod
@@ -180,54 +184,55 @@ class Summarizer:
         for subj in opinion.subjs:
             sentiment = sentiments.get(subj.lemma_, 0)
             # check if the subject word is in ALLCAPS
-            if subj.isupper():
+            if subj.is_upper:
                 if sentiment > 0:
-                    sentiment += C_INCR
-                else: sentiment -= C_INCR
-            
+                    sentiment += cls.C_INCR
+                else:
+                    sentiment -= cls.C_INCR
+
             for start_i in range(0, 3):
+                i = subj.i - opinion.chunk.sent.start
                 if i > start_i:
-                    i = subj.i - opinion.chunk.sent.start
                     # Check if the preceding words increase, decrease, or negate/nullify the sentiment
-                    s = cls._scalar_booster(opinion.chunk.sent[i-(start_i+1)], sentiment)
+                    s = cls._scalar_booster(opinion.chunk.sent[i - (start_i + 1)], sentiment)
                     if start_i == 1 and s != 0:
-                        s = s*0.95
+                        s = s * 0.95
                     if start_i == 2 and s != 0:
-                        s = s*0.9
-                    sentiment = sentiment+s
+                        s = s * 0.9
+                    sentiment = sentiment + s
 
                     sentiment *= cls._never_check(opinion.chunk.sent, start_i, i)
             sents.append(sentiment)
         return sum(sents)
 
-    #Evaluate the punctuation emphasis to sentences.
+    # Evaluate the punctuation emphasis to sentences.
 
     def punctuation_emphasis(self, opinion):
         # add emphasis from exclamation points and question marks
         ep_amplifier = self._amplify_ep(opinion.chunk.sent)
         qm_amplifier = self._amplify_qm(opinion.chunk.sent)
-        punct_amplifier = ep_amplifier+qm_amplifier
+        punct_amplifier = ep_amplifier + qm_amplifier
         return punct_amplifier
 
     def _amplify_ep(self, text):
         # check for added emphasis resulting from exclamation points (up to 4 of them)
-        ep_count = text.count("!")
+        ep_count = len([token for token in text if str(token) == "!"])
         if ep_count > 4:
             ep_count = 4
         # (empirically derived mean sentiment intensity rating increase for
         # exclamation points)
-        ep_amplifier = ep_count*0.292
+        ep_amplifier = ep_count * 0.292
         return ep_amplifier
 
     def _amplify_qm(self, text):
         # check for added emphasis resulting from question marks (2 or 3+)
-        qm_count = text.count("?")
+        qm_count = len([token for token in text if str(token) == "?"])
         qm_amplifier = 0
         if qm_count > 1:
             if qm_count <= 3:
                 # (empirically derived mean sentiment intensity rating increase for
                 # question marks)
-                qm_amplifier = qm_count*0.18
+                qm_amplifier = qm_count * 0.18
             else:
                 qm_amplifier = 0.96
         return qm_amplifier
@@ -241,12 +246,12 @@ class Summarizer:
         for lemma, opis in opinions.items():
             for opi in opis:
                 sentiment = self.sent_sentiments(opi, sentiments)
-                
+
                 # Implement punctuation emphasis in summarization
                 punct_emph = self.punctuation_emphasis(opi)
                 if sentiment > 0:
                     sentiment += punct_emph
-                elif  sentiment < 0:
+                elif sentiment < 0:
                     sentiment -= punct_emph
 
                 if sentiment > 0:
@@ -267,33 +272,33 @@ def norm(raw):
 
 if __name__ == "__main__":
     print('parsing text ...')
-    with open('review_data/3.json') as file:
+    with open('review_data/9.json') as file:
         _s = Summarizer('\n\n'.join(item['review'] for item in json.load(file)[:10]))
 
-    # for l, c in _s.nouns():
-    #     subjs = [word for word in c.root.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
-    #     if subjs:
-    #         negated = any([token.dep_ == 'neg' for token in c.root.subtree])
-    #         print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
-    #         input('press')
-    #         continue
-    #     subjs = [word for word in c.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
-    #     if subjs:
-    #         negated = len(list(c.root.head.subtree)) < 12 and \
-    #                   any([token.dep_ == 'neg' for token in c.root.head.subtree])
-    #         print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
-    #         input('press')
-    #         continue
-    #     print(l, ' - ', 'not detected', ' - ', norm(c.sent))
-    #     input('press')
-    _summary = _s.summary()
-    for i, f in enumerate(_summary):
-        print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))
-
-        print('\tpositive:')
-        for n in f.positive[:3]:
-            print('\t', norm(n.sent))
-
-        print('\tnegative:')
-        for n in f.negative[:3]:
-            print('\t', norm(n.sent))
+    for l, c in _s.nouns():
+        subjs = [word for word in c.root.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
+        if subjs:
+            negated = any([token.dep_ == 'neg' for token in c.root.subtree])
+            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+            input('press')
+            continue
+        subjs = [word for word in c.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
+        if subjs:
+            negated = len(list(c.root.head.subtree)) < 12 and \
+                      any([token.dep_ == 'neg' for token in c.root.head.subtree])
+            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+            input('press')
+            continue
+        print(l, ' - ', 'not detected', ' - ', norm(c.sent))
+        input('press')
+    # _summary = _s.summary()
+    # for i, f in enumerate(_summary):
+    #     print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))
+    #
+    #     print('\tpositive:')
+    #     for n in f.positive[:3]:
+    #         print('\t', norm(n.sent))
+    #
+    #     print('\tnegative:')
+    #     for n in f.negative[:3]:
+    #         print('\t', norm(n.sent))
