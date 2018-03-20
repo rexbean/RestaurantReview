@@ -13,12 +13,12 @@ Summary = namedtuple('Summary', ['lemma', 'positive', 'negative'])
 class Summarizer:
     nlp = spacy.load('en_core_web_lg')
     excellent, poor = nlp('excellent poor')
-    BAN_WORDS = ['lot', 'something', 'anything', 'everything', 'time']
+    BAN_WORDS = ['lot', 'bit', 'couple', 'one', 'something', 'anything', 'everything', 'thing', 'time']
     # from vader --start
     B_INCR = 0.293
     B_DECR = -0.293
     N_SCALAR = -0.74
-    C_INCR = 0.733
+    # C_INCR = 0.733
 
     PUNC_LIST = [".", "!", "?", ",", ";", ":", "-", "'", "\"",
                  "!!", "!!!", "??", "???", "?!?", "!?!", "?!?!", "!?!?"]
@@ -164,9 +164,9 @@ class Summarizer:
             # check if booster/dampener word is in ALLCAPS (while others aren't)
             if word.is_upper:
                 if sentiment > 0:
-                    scalar += cls.C_INCR
+                    scalar += cls.B_INCR
                 else:
-                    scalar -= cls.C_INCR
+                    scalar -= cls.B_INCR
         return scalar
 
     @classmethod
@@ -186,9 +186,9 @@ class Summarizer:
             # check if the subject word is in ALLCAPS
             if subj.is_upper:
                 if sentiment > 0:
-                    sentiment += cls.C_INCR
+                    sentiment += cls.B_INCR
                 else:
-                    sentiment -= cls.C_INCR
+                    sentiment -= cls.B_INCR
 
             for start_i in range(0, 3):
                 i = subj.i - opinion.chunk.sent.start
@@ -273,24 +273,30 @@ def norm(raw):
 if __name__ == "__main__":
     print('parsing text ...')
     with open('review_data/9.json') as file:
-        _s = Summarizer('\n\n'.join(item['review'] for item in json.load(file)[:10]))
+        _s = Summarizer('\n\n'.join(item['review'] for item in json.load(file)))
 
+    sentiments = _s.word_sentiments({subj.lemma_: subj
+                                     for opinions_ in _s.opinions(_s.freqs(_s.nouns())).values()
+                                     for opinion in opinions_ for subj in opinion.subjs}
+                                    .values())
     for l, c in _s.nouns():
         subjs = [word for word in c.root.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
         if subjs:
-            negated = any([token.dep_ == 'neg' for token in c.root.subtree])
-            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+            sentiment = _s.sent_sentiments(Opinion(subjs, c, False), sentiments)
+            sentiment = 'postive' if sentiment > 0 else 'negative' if sentiment < 0 else 'neutral'
+            print(l, ' - [' + sentiment + '] ', subjs, ' - ', norm(c.sent))
             input('press')
             continue
         subjs = [word for word in c.root.head.subtree if word.tag_ in ('JJ', 'JJR', 'JJS')]
         if subjs:
-            negated = len(list(c.root.head.subtree)) < 12 and \
-                      any([token.dep_ == 'neg' for token in c.root.head.subtree])
-            print(l, ' - ', negated, subjs, ' - ', norm(c.sent))
+            sentiment = _s.sent_sentiments(Opinion(subjs, c, False), sentiments)
+            sentiment = 'postive' if sentiment > 0 else 'negative' if sentiment < 0 else 'neutral'
+            print(l, ' - [' + sentiment + '] ', subjs, ' - ', norm(c.sent))
             input('press')
             continue
         print(l, ' - ', 'not detected', ' - ', norm(c.sent))
         input('press')
+
     # _summary = _s.summary()
     # for i, f in enumerate(_summary):
     #     print(str(i + 1) + '.', '[' + f.lemma + ']', str(len(f.positive)) + '/' + str(len(f.negative)))

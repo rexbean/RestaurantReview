@@ -57,7 +57,7 @@ def html(summary):
             with tag('div'):
                 with tag('div', klass='layui-container'):
                     with tag('div', klass='layui-row', style='margin-top: 40px'):
-                        with tag('div', klass='layui-col-md10 layui-col-md-offset1'):
+                        with tag('div', klass='layui-col-md12'):
                             with tag('div', klass='layui-card'):
                                 line('div', 'Reviews Summary', klass='layui-card-header layui-bg-green')
                                 with tag('div', klass='layui-card-body'):
@@ -68,7 +68,7 @@ def html(summary):
                                                     html_for_item(i, item, doc, tag, text, line)
                                         with tag('div', klass='layui-col-md6'):
                                             line('div', '', id='chart',
-                                                 style='width: 400px; height: 400px; margin: 20px auto;')
+                                                 style='width: 500px; height: 500px; margin: 20px auto;')
             line('script', '', src='http://cdn.90so.net/layui/2.2.5/layui.all.js')
             line('script', '', src='https://cdnjs.cloudflare.com/ajax/libs/echarts/4.0.4/echarts-en.simple.min.js')
             line('script', 'var data = ' + data + ''';
@@ -76,7 +76,7 @@ def html(summary):
                     series: [
                         {
                             type: 'pie',
-                            radius: '55%',
+                            radius: '60%',
                             center: ['50%', '50%'],
                             data: data.reverse(),
                             roseType: 'radius',
