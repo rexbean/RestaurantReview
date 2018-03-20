@@ -54,7 +54,7 @@ class Summarizer:
 
     def __init__(self, reviews):
         self.raw = reviews
-        self.doc = self.nlp(re.sub('(?<![.])\n+', '.\n', reviews))
+        self.doc = self.nlp(re.sub('(?<![.!?])\n+', '.\n', reviews))
 
     def nouns(self):
         """ return [Noun] """

@@ -27,7 +27,7 @@ def html_for_item(i, item, doc, tag, text, line):
             doc.stag('hr')
             line('div', 'positive:')
             with tag('ul'):
-                for n in item.positive[:3]:
+                for n in item.positive[:5]:
                     with tag('li'):
                         line('span', '', klass='layui-badge-dot')
                         doc.asis('&nbsp;&nbsp;')
@@ -35,7 +35,7 @@ def html_for_item(i, item, doc, tag, text, line):
             doc.stag('hr')
             line('div', 'negative:')
             with tag('ul'):
-                for n in item.negative[:3]:
+                for n in item.negative[:5]:
                     with tag('li'):
                         line('span', '', klass='layui-badge-dot layui-bg-cyan')
                         doc.asis('&nbsp;&nbsp;')
