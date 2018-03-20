@@ -25,7 +25,8 @@ def html_for_item(i, item, doc, tag, text, line):
                 line('div', '', ('lay-percent', str(100 * pos // (pos + neg)) + '%'),
                      klass='layui-progress-bar layui-bg-red')
             doc.stag('hr')
-            line('div', 'positive:')
+            with tag('div'):
+                line('strong', 'positive:')
             with tag('ul'):
                 for n in item.positive[:5]:
                     with tag('li'):
@@ -33,7 +34,8 @@ def html_for_item(i, item, doc, tag, text, line):
                         doc.asis('&nbsp;&nbsp;')
                         text(str(n.sent))
             doc.stag('hr')
-            line('div', 'negative:')
+            with tag('div'):
+                line('strong', 'negative:')
             with tag('ul'):
                 for n in item.negative[:5]:
                     with tag('li'):
